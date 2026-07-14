@@ -4,7 +4,7 @@
 
 This is a single-page operational dashboard for Meridian Space, a fictional commercial space transportation company whose mission is to make travel beyond Earth as routine, reliable, and accessible as commercial air travel.
 
-The dashboard is used by the Mission Operations Director to monitor the health of the Meridian Space transportation network. It should provide immediate operational awareness, allowing leadership to quickly identify issues, monitor mission readiness, and make informed decisions without navigating multiple systems.
+The dashboard is used by the Mission Operations Director to monitor the health of the Meridian Space transportation network. It should provide immediate operational awareness, allowing leadership to quickly identify issues, understand network readiness, and make informed decisions without navigating multiple systems.
 
 Think airline operations center, not NASA mission control.
 
@@ -35,6 +35,8 @@ The dashboard should prioritize operational awareness over historical analytics.
 
 The user should understand the overall health of the transportation network within five seconds of opening the application.
 
+The experience should prioritize clarity and simplicity over technical complexity. Information should be easy to understand, even for users without an aerospace background.
+
 Information should be presented in order of operational importance.
 
 Historical charts should support decision making rather than dominate the experience.
@@ -62,105 +64,56 @@ Fleet readiness and supporting operational systems.
 **Priority 5**
 Historical operational trends and analytics.
 
-Supporting information should become progressively less prominent as the user scrolls.
+Supporting information should become progressively less prominent throughout the experience.
 
 ---
 
 ## Data
 
-Generate a realistic fictional dataset as a local JSON file:
+Generate a realistic fake dataset as a local JSON file at `src/data/missions.json`.
 
-`src/data/missions.json`
+The dataset should represent a mature commercial space transportation network operated by Meridian Space.
 
-Create twelve scheduled missions across 2026.
+The dashboard should present aggregated operational information rather than focusing on individual missions.
 
-The dataset should represent a mature commercial space transportation company where launches occur routinely throughout the year. Most missions should appear healthy while a small number contain operational issues requiring attention.
+Requirements:
 
-Mission IDs should follow a consistent naming convention such as:
-
-- MS-101
-- MS-102
-- MS-103
-
-Spacecraft should have unique names representing the Meridian Space fleet (for example, Meridian Atlas, Meridian Aurora, Meridian Odyssey, and Meridian Horizon).
-
-Meridian Space operates from a primary launch facility called **Meridian Spaceport** and serves destinations such as:
-
-- Low Earth Orbit
-- Meridian Orbital Station
-- Lunar Gateway
-- Research Platform Alpha
-- Tranquility Base
-
-Each mission should contain:
-
-- Mission ID
-- Spacecraft Name
-- Mission Type (Tourism, Research, Cargo, Crew Rotation, Station Resupply, Maintenance)
-- Origin
-- Destination
-- Launch Date
-- Launch Time
-- Mission Status
-- Launch Readiness Score
-- Spacecraft Health
-- Crew Readiness
-- Passenger Check-in Percentage
-- Passenger Count
-- Fuel Status
-- Weather Risk
-- Communications Status
-- Life Support Status
-- Mission Duration
-- Delay Minutes
-- Operational Alerts
-
-The dataset should include realistic operational variation.
-
-Examples include:
-
-- Most missions should have a Nominal status.
-- One mission should be delayed due to weather.
-- One mission should have reduced passenger check-in.
-- One mission should have a communications warning.
-- One mission should have a lower launch readiness score due to maintenance.
-
-Operational issues should feel realistic and manageable rather than catastrophic.
-
----
-
-## Layout
-
-The dashboard should be organized into clear operational sections rather than a traditional analytics dashboard.
-
-### Network Status
-
-Provide an immediate summary of the transportation network including overall operational health, active missions, delayed launches, and critical alerts.
-
-### Mission Operations
-
-Display missions requiring attention first, followed by upcoming launches.
-
-### Fleet Status
-
-Display spacecraft health, crew readiness, communications status, and supporting operational systems.
-
-### Operational Trends
-
-Display historical trends that help explain performance over time without becoming the primary focus of the experience.
-
-Use Vuetify components throughout the application.
+- Approximately 48 missions across the year 2026 (roughly 4 launches per month).
+- Launches should be distributed naturally throughout the year.
+- Reuse the same spacecraft across multiple missions to simulate an active fleet:
+  - Meridian Atlas
+  - Meridian Aurora
+  - Meridian Odyssey
+  - Meridian Horizon
+  - Meridian Zenith
+- Include a mix of mission types:
+  - Tourism
+  - Research
+  - Cargo
+  - Crew Rotation
+  - Station Resupply
+  - Maintenance
+- Most missions should operate normally, with occasional watch conditions, delays, and operational alerts to create meaningful operational scenarios.
+- Preserve a consistent JSON structure so the dashboard can aggregate and filter the data.
+- The data should feel believable and communicate that commercial space travel has become routine, similar to a modern airline network.
 
 ---
 
 ## Interactions
 
-- Mission selector filters the entire dashboard.
-- "All Missions" displays network-wide metrics.
-- Selecting a mission updates all operational panels and charts.
-- Status indicators should clearly communicate Nominal, Watch, and Critical states.
-- Trend indicators should communicate improving or declining operational health.
-- Handle empty states gracefully.
+The dashboard should allow users to quickly understand the health of the Meridian Space transportation network and identify areas requiring attention.
+
+The dashboard should emphasize the overall health of the network before exposing detailed operational information.
+
+The experience should support filtering and exploration of the operational data while preserving meaningful context across the dashboard.
+
+Status indicators should clearly communicate Nominal, Watch, and Critical states.
+
+Trend indicators should communicate improving or declining operational health.
+
+Handle empty states gracefully.
+
+Interactions should feel fast, intuitive, and require minimal effort to understand.
 
 ---
 
@@ -191,8 +144,7 @@ Charts should resize appropriately and remain readable on smaller screens.
 - Charts should use a cohesive color palette
 - Avoid science-fiction UI, neon effects, glowing elements, or video game aesthetics
 
-The interface should communicate confidence, precision, and operational excellence.
-
+The interface should communicate confidence, precision, and operational excellence while making commercial space transportation feel routine and dependable.
 ---
 
 ## Technical Requirements
