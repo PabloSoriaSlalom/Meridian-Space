@@ -14,6 +14,8 @@ import {
   Tooltip,
 } from 'chart.js'
 import type { ChartOptions } from 'chart.js'
+import KpiPill from '@/components/KpiPill.vue'
+import OperationalCard from '@/components/OperationalCard.vue'
 import rawMissionData from '@/data/missions.json'
 
 ChartJS.register(
@@ -70,6 +72,8 @@ interface MissionDataset {
 
 const dataset = rawMissionData as MissionDataset
 const missionTypeFilter = ref<string>('all')
+const heroBackgroundImage = new URL('../images/bg_hero.jpg', import.meta.url).href
+const brandLogoImage = new URL('../images/MS_logo.png', import.meta.url).href
 
 const allMissions = computed(() => {
   return [...dataset.missions].sort((a, b) => {
@@ -145,8 +149,55 @@ const openAlertCount = computed(() => {
   return flattenedAlerts.value.filter((alert) => alert.status !== 'Resolved').length
 })
 
+const activeMissionCount = computed(() => {
+  return allMissions.value.length
+})
+
+const allScopeAttentionCount = computed(() => {
+  return allMissions.value.filter((mission) => {
+    return (
+      mission.missionStatus === 'Delayed' ||
+      mission.missionStatus === 'Watch' ||
+      mission.delayMinutes > 0 ||
+      mission.communicationsStatus === 'Warning' ||
+      mission.launchReadinessScore < 90 ||
+      mission.operationalAlerts.some((alert) => alert.status !== 'Resolved')
+    )
+  }).length
+})
+
 const nextLaunch = computed(() => {
   return upcomingMissions.value[0] ?? null
+})
+
+const allScopeNextLaunch = computed(() => {
+  return allMissions.value.find((mission) => {
+    const launch = new Date(`${mission.launchDate}T${mission.launchTime}:00`)
+    return launch >= now && mission.missionStatus !== 'Completed'
+  }) ?? null
+})
+
+const nextLaunchDay = computed(() => {
+  if (!allScopeNextLaunch.value) {
+    return 'N/A'
+  }
+
+  return new Date(`${allScopeNextLaunch.value.launchDate}T${allScopeNextLaunch.value.launchTime}:00`).toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+  })
+})
+
+const nextLaunchClock = computed(() => {
+  if (!allScopeNextLaunch.value) {
+    return '--:--'
+  }
+
+  return new Date(`${allScopeNextLaunch.value.launchDate}T${allScopeNextLaunch.value.launchTime}:00`).toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  })
 })
 
 const todayKey = now.toISOString().slice(0, 10)
@@ -205,7 +256,7 @@ const recentAlerts = computed(() => {
 
 const statusHeadline = computed(() => {
   if (missionTypeFilter.value === 'all') {
-    return statusTag.value === 'Nominal' ? 'Operating Normally' : 'Requires Attention'
+    return 'All Missions'
   }
 
   return `${missionTypeFilter.value} Operations`
@@ -220,14 +271,6 @@ const statusSummary = computed(() => {
   }
 
   return `All ${missionTypeFilter.value} Missions Running as Planned`
-})
-
-const scopeLabel = computed(() => {
-  if (missionTypeFilter.value === 'all') {
-    return 'All Missions'
-  }
-
-  return `${missionTypeFilter.value} Missions`
 })
 
 const scopeSubLabel = computed(() => {
@@ -462,12 +505,7 @@ const formatStatusColor = (status: MissionStatus) => {
       <v-col cols="12">
         <v-sheet class="brand-bar pa-4 pa-md-5" rounded="xl">
           <div class="brand-lockup">
-            <v-avatar class="brand-mark" size="48" rounded="lg">
-              <v-icon class="brand-mark-icon" color="white" icon="mdi-orbit" size="26" />
-            </v-avatar>
-            <div class="brand-copy">
-              <div class="brand-title">Meridian Space</div>
-            </div>
+            <v-img class="brand-logo" :src="brandLogoImage" alt="Meridian Space logo" contain />
           </div>
         </v-sheet>
       </v-col>
@@ -475,12 +513,13 @@ const formatStatusColor = (status: MissionStatus) => {
 
     <v-row class="mb-6">
       <v-col cols="12">
-        <v-card class="network-hero pa-5 pa-md-8" rounded="xl">
+        <v-card class="network-hero pa-5 pa-md-8" rounded="xl" :style="{ '--hero-bg-image': `url(${heroBackgroundImage})` }">
           <div class="d-flex justify-space-between align-start ga-4 flex-wrap mb-5">
             <div>
-              <div class="text-overline text-info">Network Status</div>
+              <div class="hero-eyebrow">
+                <span class="hero-eyebrow-label">Operations Status</span>
+              </div>
               <h1 class="dashboard-title">{{ statusHeadline }}</h1>
-              <div class="text-caption text-medium-emphasis mb-2">{{ scopeLabel }}</div>
               <p class="hero-summary text-medium-emphasis">{{ statusSummary }}</p>
             </div>
             <div class="hero-controls">
@@ -496,14 +535,12 @@ const formatStatusColor = (status: MissionStatus) => {
             </div>
           </div>
 
-          <div class="hero-readiness d-flex align-end ga-3 flex-wrap">
+          <div class="hero-readiness d-flex align-center ga-3 flex-wrap">
             <div class="readiness-value">{{ networkHealthScore }}%</div>
-            <div class="readiness-label">Network Readiness</div>
-            <v-chip :color="statusColor" label size="small">{{ statusTag }}</v-chip>
-            <v-chip color="secondary" label size="small">
-              Updated {{ new Date(dataset.lastUpdated).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) }}
-            </v-chip>
-            <v-chip color="surface-variant" label size="small">{{ scopeSubLabel }}</v-chip>
+            <div class="readiness-label">Operational Readiness</div>
+            <KpiPill label="Active Missions" :value="activeMissionCount" />
+            <KpiPill label="Need Attention" :value="allScopeAttentionCount" />
+            <KpiPill label="Next Launch" :value="nextLaunchDay" :value2="nextLaunchClock" />
           </div>
         </v-card>
       </v-col>
@@ -511,123 +548,124 @@ const formatStatusColor = (status: MissionStatus) => {
 
     <v-row class="mb-6" dense>
       <v-col cols="12" md="6">
-        <v-card class="op-card" rounded="xl">
-          <v-card-title class="op-card-title">
-            <div class="card-title-lockup">
-              <v-icon class="card-title-icon" color="white" icon="mdi-rocket-launch-outline" size="32" />
-              <span>Next Launch</span>
-            </div>
-          </v-card-title>
-          <v-card-text class="op-card-content">
-            <template v-if="nextLaunch">
-              <div class="card-highlight">{{ nextLaunch.missionId }} to {{ nextLaunch.destination }}</div>
-              <div class="text-body-2 text-medium-emphasis">{{ formatDateTime(nextLaunch) }}</div>
-              <div class="text-body-2 mt-2">{{ nextLaunch.spacecraftName }} · Crew {{ nextLaunch.crewCount }}</div>
-            </template>
-            <div v-else class="text-medium-emphasis">No upcoming launches in this view.</div>
-          </v-card-text>
-        </v-card>
+        <OperationalCard
+          v-if="nextLaunch"
+          title="Next Launch"
+          icon="mdi-rocket-launch-outline"
+          variant="next"
+          :highlight="`${nextLaunch.missionId} to ${nextLaunch.destination}`"
+          :lines="[
+            { text: formatDateTime(nextLaunch), muted: true, spacing: 'none' },
+            { text: `${nextLaunch.spacecraftName} · Crew ${nextLaunch.crewCount}`, spacing: 'md' },
+          ]"
+        />
+        <OperationalCard
+          v-else
+          title="Next Launch"
+          icon="mdi-rocket-launch-outline"
+          variant="next"
+          is-empty
+          empty-text="No upcoming launches in this view."
+        />
       </v-col>
 
       <v-col cols="12" md="6">
-        <v-card class="op-card" rounded="xl">
-          <v-card-title class="op-card-title">
-            <div class="card-title-lockup">
-              <v-icon class="card-title-icon" color="white" icon="mdi-alert-circle-outline" size="32" />
-              <span>Needs Attention</span>
-            </div>
-          </v-card-title>
-          <v-card-text class="op-card-content">
-            <div class="card-highlight">{{ missionsNeedingAttention.length }} mission{{ missionsNeedingAttention.length === 1 ? '' : 's' }}</div>
-            <div v-if="missionsNeedingAttention.length > 0" class="text-body-2 text-medium-emphasis mt-1">
-              {{ missionsNeedingAttention.slice(0, 2).map((m) => m.missionId).join(' · ') }}
-            </div>
-            <div v-else class="text-body-2 text-medium-emphasis mt-1">Everything is on track right now.</div>
-            <div class="text-body-2 mt-2">{{ openAlertCount }} open alert{{ openAlertCount === 1 ? '' : 's' }}</div>
-          </v-card-text>
-        </v-card>
+        <OperationalCard
+          title="Needs Attention"
+          icon="mdi-alert-circle-outline"
+          variant="attention"
+          :highlight="`${missionsNeedingAttention.length} mission${missionsNeedingAttention.length === 1 ? '' : 's'}`"
+          :lines="[
+            {
+              text:
+                missionsNeedingAttention.length > 0
+                  ? missionsNeedingAttention.slice(0, 2).map((m) => m.missionId).join(' · ')
+                  : 'Everything is on track right now.',
+              muted: true,
+              spacing: 'sm',
+            },
+            {
+              text: `${openAlertCount} open alert${openAlertCount === 1 ? '' : 's'}`,
+              spacing: 'md',
+            },
+          ]"
+        />
       </v-col>
 
       <v-col cols="12" md="6">
-        <v-card class="op-card" rounded="xl">
-          <v-card-title class="op-card-title">
-            <div class="card-title-lockup">
-              <v-icon class="card-title-icon" color="white" icon="mdi-shield-check-outline" size="32" />
-              <span>Fleet Health</span>
-            </div>
-          </v-card-title>
-          <v-card-text class="op-card-content">
-            <div class="card-highlight">{{ fleetHealthAverage }}% fleet health</div>
-            <div class="text-body-2 text-medium-emphasis mt-1">{{ fleetSummary.length }} spacecraft in operation scope</div>
-            <div class="text-body-2 mt-2">{{ fleetWatchCount }} fleet item{{ fleetWatchCount === 1 ? '' : 's' }} on watch</div>
-          </v-card-text>
-        </v-card>
+        <OperationalCard
+          title="Fleet Health"
+          icon="mdi-shield-check-outline"
+          :highlight="`${fleetHealthAverage}% fleet health`"
+          :lines="[
+            { text: `${fleetSummary.length} spacecraft in operation scope`, muted: true, spacing: 'sm' },
+            { text: `${fleetWatchCount} fleet item${fleetWatchCount === 1 ? '' : 's'} on watch`, spacing: 'md' },
+          ]"
+        />
       </v-col>
 
       <v-col cols="12" md="6">
-        <v-card class="op-card" rounded="xl">
-          <v-card-title class="op-card-title">
-            <div class="card-title-lockup">
-              <v-icon class="card-title-icon" color="white" icon="mdi-calendar-clock-outline" size="32" />
-              <span>Today's Schedule</span>
-            </div>
-          </v-card-title>
-          <v-card-text class="op-card-content">
-            <div class="card-highlight">{{ todaysSchedule.length }} scheduled today</div>
-            <div v-if="todaysSchedule.length > 0" class="text-body-2 text-medium-emphasis mt-1">
-              {{ todaysSchedule.map((mission) => `${mission.missionId} ${mission.launchTime}`).join(' · ') }}
-            </div>
-            <div v-else class="text-body-2 text-medium-emphasis mt-1">No launches scheduled today.</div>
-            <div class="text-body-2 mt-2">{{ upcomingMissions.length }} upcoming mission{{ upcomingMissions.length === 1 ? '' : 's' }}</div>
-          </v-card-text>
-        </v-card>
+        <OperationalCard
+          title="Today's Schedule"
+          icon="mdi-calendar-clock-outline"
+          :highlight="`${todaysSchedule.length} scheduled today`"
+          :lines="[
+            {
+              text:
+                todaysSchedule.length > 0
+                  ? todaysSchedule.map((mission) => `${mission.missionId} ${mission.launchTime}`).join(' · ')
+                  : 'No launches scheduled today.',
+              muted: true,
+              spacing: 'sm',
+            },
+            {
+              text: `${upcomingMissions.length} upcoming mission${upcomingMissions.length === 1 ? '' : 's'}`,
+              spacing: 'md',
+            },
+          ]"
+        />
       </v-col>
 
       <v-col cols="12" md="6">
-        <v-card class="op-card" rounded="xl">
-          <v-card-title class="op-card-title">
-            <div class="card-title-lockup">
-              <v-icon class="card-title-icon" color="white" icon="mdi-weather-partly-cloudy" size="32" />
-              <span>Weather</span>
-            </div>
-          </v-card-title>
-          <v-card-text class="op-card-content">
-            <div class="card-highlight">{{ weatherSummary.high }} high-risk window{{ weatherSummary.high === 1 ? '' : 's' }}</div>
-            <div class="text-body-2 text-medium-emphasis mt-1">{{ weatherSummary.moderate }} moderate-risk launch condition{{ weatherSummary.moderate === 1 ? '' : 's' }}</div>
-            <div class="text-body-2 mt-2">{{ weatherSummary.clear }} launch{{ weatherSummary.clear === 1 ? '' : 'es' }} currently in clear weather</div>
-          </v-card-text>
-        </v-card>
+        <OperationalCard
+          title="Weather"
+          icon="mdi-weather-partly-cloudy"
+          :highlight="`${weatherSummary.high} high-risk window${weatherSummary.high === 1 ? '' : 's'}`"
+          :lines="[
+            {
+              text: `${weatherSummary.moderate} moderate-risk launch condition${weatherSummary.moderate === 1 ? '' : 's'}`,
+              muted: true,
+              spacing: 'sm',
+            },
+            {
+              text: `${weatherSummary.clear} launch${weatherSummary.clear === 1 ? '' : 'es'} currently in clear weather`,
+              spacing: 'md',
+            },
+          ]"
+        />
       </v-col>
 
       <v-col cols="12" md="6">
-        <v-card class="op-card" rounded="xl">
-          <v-card-title class="op-card-title">
-            <div class="card-title-lockup">
-              <v-icon class="card-title-icon" color="white" icon="mdi-bell-outline" size="32" />
-              <span>Recent Alerts</span>
-            </div>
-          </v-card-title>
-          <v-card-text class="op-card-content">
-            <div v-if="recentAlerts.length === 0" class="text-medium-emphasis">No recent alerts in this view.</div>
-            <v-list v-else class="bg-transparent pa-0" density="compact">
-              <v-list-item v-for="(alert, index) in recentAlerts" :key="`${alert.missionId}-${index}`" class="px-0">
-                <v-list-item-title class="text-body-2">{{ alert.message }}</v-list-item-title>
-                <v-list-item-subtitle>
-                  {{ alert.missionId }} · {{ alert.status }}
-                </v-list-item-subtitle>
-              </v-list-item>
-            </v-list>
-          </v-card-text>
-        </v-card>
+        <OperationalCard title="Recent Alerts" icon="mdi-bell-outline">
+          <div v-if="recentAlerts.length === 0" class="text-medium-emphasis">No recent alerts in this view.</div>
+          <v-list v-else class="bg-transparent pa-0" density="compact">
+            <v-list-item v-for="(alert, index) in recentAlerts" :key="`${alert.missionId}-${index}`" class="px-0">
+              <v-list-item-title class="text-body-2">{{ alert.message }}</v-list-item-title>
+              <v-list-item-subtitle>
+                {{ alert.missionId }} · {{ alert.status }}
+              </v-list-item-subtitle>
+            </v-list-item>
+          </v-list>
+        </OperationalCard>
       </v-col>
     </v-row>
 
     <v-row>
       <v-col cols="12">
         <v-card class="trend-section" rounded="xl">
-          <v-card-title class="op-card-title">
-            <div class="card-title-lockup">
-              <v-icon class="card-title-icon" color="white" icon="mdi-chart-line" size="32" />
+          <v-card-title class="section-title">
+            <div class="section-title-lockup">
+              <v-icon class="section-title-icon" color="white" icon="mdi-chart-line" size="32" />
               <span>Trends and Context</span>
             </div>
           </v-card-title>
@@ -676,32 +714,11 @@ const formatStatusColor = (status: MissionStatus) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 14px;
-  text-align: center;
 }
 
-.brand-mark {
-  background: linear-gradient(135deg, #485696, #fc7a1e);
-  color: #08111f;
-  box-shadow: inset 0 0 0 1px rgba(231, 231, 231, 0.18);
-}
-
-.brand-mark-icon {
-  color: #ffffff;
-}
-
-.brand-copy {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-
-.brand-title {
-  font-family: 'Space Grotesk', 'Avenir Next', sans-serif;
-  font-size: 1.15rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  color: #E7E7E7;
+.brand-logo {
+  width: clamp(180px, 24vw, 260px);
+  max-height: 56px;
 }
 
 .dashboard-title {
@@ -712,11 +729,39 @@ const formatStatusColor = (status: MissionStatus) => {
 }
 
 .network-hero {
-  background:
-    linear-gradient(125deg, rgba(24, 33, 58, 0.96), rgba(17, 24, 44, 0.94)),
-    radial-gradient(circle at 100% 0%, rgba(72, 86, 150, 0.28), transparent 50%);
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  background: rgba(17, 24, 44, 0.45);
   border: 1px solid rgba(231, 231, 231, 0.12);
   box-shadow: 0 18px 42px rgba(3, 8, 19, 0.4);
+}
+
+.network-hero > * {
+  position: relative;
+  z-index: 2;
+}
+
+.network-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: var(--hero-bg-image);
+  background-size: cover;
+  background-position: center 42%;
+  opacity: 0.66;
+  z-index: 0;
+}
+
+.network-hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(125deg, rgba(24, 33, 58, 0.52), rgba(17, 24, 44, 0.46)),
+    radial-gradient(circle at 100% 0%, rgba(72, 86, 150, 0.2), transparent 56%),
+    linear-gradient(180deg, rgba(16, 24, 44, 0.1), rgba(16, 24, 44, 0.32));
+  z-index: 1;
 }
 
 .hero-controls {
@@ -728,6 +773,21 @@ const formatStatusColor = (status: MissionStatus) => {
 .hero-summary {
   font-size: 1.05rem;
   color: #E7E7E7;
+}
+
+.hero-eyebrow {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+  text-transform: uppercase;
+  letter-spacing: 0.11em;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.hero-eyebrow-label {
+  color: #FC7A1E;
 }
 
 .hero-readiness {
@@ -745,17 +805,10 @@ const formatStatusColor = (status: MissionStatus) => {
 .readiness-label {
   font-size: 0.95rem;
   color: #E7E7E7;
-  margin-bottom: 7px;
+  margin-bottom: 0;
 }
 
-.op-card {
-  height: 100%;
-  background: var(--panel);
-  border: 1px solid rgba(231, 231, 231, 0.12);
-  backdrop-filter: blur(6px);
-}
-
-.op-card-title {
+.section-title {
   display: flex;
   align-items: center;
   color: #FC7A1E;
@@ -765,40 +818,16 @@ const formatStatusColor = (status: MissionStatus) => {
   padding-bottom: 8px;
 }
 
-.card-title-lockup {
+.section-title-lockup {
   display: flex;
   align-items: center;
   gap: 14px;
 }
 
-.card-title-icon {
+.section-title-icon {
   font-size: 2rem;
   color: #E7E7E7;
   opacity: 0.84;
-}
-
-.op-card-content {
-  padding-left: 64px;
-  padding-top: 0;
-}
-
-.op-card-content .v-list {
-  margin-left: -4px;
-}
-
-.op-card-content .v-list-item {
-  padding-left: 0;
-}
-
-.card-highlight {
-  font-size: 1.3rem;
-  font-weight: 600;
-  line-height: 1.35;
-}
-
-.op-card-content :deep(.text-body-2),
-.op-card-content :deep(.text-medium-emphasis) {
-  padding-left: 0;
 }
 
 .trend-section {

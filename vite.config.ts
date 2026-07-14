@@ -12,6 +12,9 @@ export default defineConfig({
     vuetify({ autoImport: true }),
     vueDevTools(),
   ],
+  build: {
+    chunkSizeWarningLimit: 1600,
+  },
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
