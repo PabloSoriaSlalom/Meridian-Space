@@ -10,7 +10,22 @@ import router from './router'
 
 const vuetify = createVuetify({
 	theme: {
-		defaultTheme: 'light',
+		defaultTheme: 'operationsDark',
+		themes: {
+			operationsDark: {
+				dark: true,
+				colors: {
+					background: '#070f1f',
+					surface: '#111c31',
+					'primary': '#5f87ff',
+					'secondary': '#2e3f62',
+					'success': '#37b57f',
+					'warning': '#f1b05a',
+					'error': '#db5f6b',
+					'info': '#67a7ff',
+				},
+			},
+		},
 	},
 	icons: {
 		defaultSet: 'mdi',
